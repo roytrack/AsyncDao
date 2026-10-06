@@ -1,6 +1,7 @@
 package com.tg.async.dynamic.xmltags;
 
 import ognl.ClassResolver;
+import ognl.OgnlContext;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,7 +14,8 @@ public class OgnlClassResolver implements ClassResolver {
     private final Map<String, Class<?>> classes = new HashMap<String, Class<?>>(101);
 
     @Override
-    public Class classForName(String className, Map context) throws ClassNotFoundException {
+    @SuppressWarnings("unchecked")
+    public <T> Class<T> classForName(String className, OgnlContext context) throws ClassNotFoundException {
         Class<?> result = null;
         if ((result = classes.get(className)) == null) {
             try {
@@ -26,7 +28,7 @@ public class OgnlClassResolver implements ClassResolver {
             }
             classes.put(className, result);
         }
-        return result;
+        return (Class<T>) result;
     }
 
 }

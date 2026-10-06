@@ -2,6 +2,7 @@ package com.tg.async.dynamic.xmltags;
 
 import com.tg.async.exception.BuilderException;
 import ognl.Ognl;
+import ognl.OgnlContext;
 import ognl.OgnlException;
 
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class OgnlCache {
     private static final Map<String, Object> expressionCache = new ConcurrentHashMap<String, Object>();
+    private static final OgnlMemberAccess MEMBER_ACCESS = new OgnlMemberAccess();
 
     private OgnlCache() {
         // Prevent Instantiation of Static Class
@@ -19,7 +21,7 @@ public class OgnlCache {
 
     public static Object getValue(String expression, Object root) {
         try {
-            Map<Object, OgnlClassResolver> context = Ognl.createDefaultContext(root, new OgnlClassResolver());
+            OgnlContext context = Ognl.createDefaultContext(root, MEMBER_ACCESS, new OgnlClassResolver(), null);
             return Ognl.getValue(parseExpression(expression), context, root);
         } catch (OgnlException e) {
             throw new BuilderException("Error evaluating expression '" + expression + "'. Cause: " + e, e);

@@ -14,41 +14,58 @@
     </modules>
 
     <properties>
-        <java.version>1.8</java.version>
+        <java.version>17</java.version>
         <java.encoding>UTF-8</java.encoding>
-        <scala.version>2.12.4</scala.version>
-        <vertx.version>3.5.0</vertx.version>
-        <commomspool.version>2.4.2</commomspool.version>
+        <project.build.sourceEncoding>${java.encoding}</project.build.sourceEncoding>
+        <scala.version>2.12.21</scala.version>
+        <vertx.version>4.5.34</vertx.version>
+        <netty.version>4.1.139.Final</netty.version>
+        <commomspool.version>2.13.1</commomspool.version>
         <asyncdriver.version>0.2.21</asyncdriver.version>
+        <slf4j.version>2.0.17</slf4j.version>
+        <lombok.version>1.18.48</lombok.version>
+        <junit.version>4.13.2</junit.version>
+        <spring-boot.version>3.5.16</spring-boot.version>
+        <log4j2.version>2.25.5</log4j2.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- mysql-async pulls in netty-all 4.1.6.Final; align every netty artifact to one patched version -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
 
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.21</version>
+            <version>${slf4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.16.16</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.21</version>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.7.16</version>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>${junit.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -57,13 +74,18 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                     <encoding>${java.encoding}</encoding>
-                    <compilerArgs>
-                    <arg>-parameters</arg>
-                    </compilerArgs>
+                    <parameters>true</parameters>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

@@ -6,6 +6,8 @@ asyncDao是一款异步非阻塞模型下的数据访问层工具。
 * 事务支持
 * SpringBoot支持
 
+环境要求：JDK 17+；SpringBoot支持基于 Spring Boot 3.x。
+
 ### Mybatis like
 使用上与Mybatis几乎一致，由于异步非阻塞的关系，数据的返回都会通过回调DataHandler来完成，所以方法定义参数的最后一个一定是DataHandler类型。由于需要提取方法的参数名，于是需要加上编译参数`-parameters`，请将它在IDE和maven里配置上。
 

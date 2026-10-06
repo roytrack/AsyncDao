@@ -38,7 +38,7 @@ public class AsyncSQLConnectionImpl implements SQLConnection {
             }
             inAutoCommit = autoCommit;
         }
-        fut.setHandler(handler);
+        fut.onComplete(handler);
         return this;
     }
 
@@ -76,7 +76,7 @@ public class AsyncSQLConnectionImpl implements SQLConnection {
     public SQLConnection query(String sql, Handler<AsyncResult<QueryResult>> handler) {
         beginTransactionIfNeeded(v -> {
             final Future<QueryResult> future = ScalaUtils.scalaToVertx(connection.sendQuery(sql), executionContext);
-            future.setHandler(handler);
+            future.onComplete(handler);
         });
         return this;
     }
@@ -115,7 +115,7 @@ public class AsyncSQLConnectionImpl implements SQLConnection {
         if (inTransaction) {
             inTransaction = false;
             Future<QueryResult> future = ScalaUtils.scalaToVertx(connection.sendQuery("COMMIT"), executionContext);
-            future.setHandler((v) -> {
+            future.onComplete((v) -> {
                 pool.returnObject(connection);
                 handler.handle(Future.succeededFuture());
             });
@@ -180,12 +180,12 @@ public class AsyncSQLConnectionImpl implements SQLConnection {
     private SQLConnection endAndStartTransaction(String command, Handler<AsyncResult<Void>> handler) {
         if (inTransaction) {
             inTransaction = false;
-            ScalaUtils.scalaToVertx(connection.sendQuery(command), executionContext).setHandler(
+            ScalaUtils.scalaToVertx(connection.sendQuery(command), executionContext).onComplete(
                     ar -> {
                         if (ar.failed()) {
                             handler.handle(Future.failedFuture(ar.cause()));
                         } else {
-                            ScalaUtils.scalaToVertx(connection.sendQuery("BEGIN"), executionContext).setHandler(
+                            ScalaUtils.scalaToVertx(connection.sendQuery("BEGIN"), executionContext).onComplete(
                                     ar2 -> {
                                         if (ar2.failed()) {
                                             handler.handle(Future.failedFuture(ar.cause()));
@@ -208,7 +208,7 @@ public class AsyncSQLConnectionImpl implements SQLConnection {
         if (!inAutoCommit && !inTransaction) {
             inTransaction = true;
             ScalaUtils.scalaToVertxVoid(connection.sendQuery("BEGIN"), executionContext)
-                    .setHandler(action);
+                    .onComplete(action);
         } else {
             action.handle(Future.succeededFuture());
         }

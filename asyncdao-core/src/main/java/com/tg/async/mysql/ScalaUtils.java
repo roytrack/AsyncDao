@@ -2,6 +2,7 @@ package com.tg.async.mysql;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import scala.Function1;
 import scala.concurrent.ExecutionContext;
 import scala.runtime.AbstractFunction1;
@@ -12,35 +13,35 @@ public final class ScalaUtils {
     }
 
     public static <T> Future<T> scalaToVertx(scala.concurrent.Future<T> future, ExecutionContext ec) {
-        Future<T> fut = Future.future();
+        Promise<T> promise = Promise.promise();
         future.onComplete(new AbstractFunction1<Try<T>, Void>() {
             @Override
             public Void apply(Try<T> v1) {
                 if (v1.isSuccess()) {
-                    fut.complete(v1.get());
+                    promise.complete(v1.get());
                 } else {
-                    fut.fail(v1.failed().get());
+                    promise.fail(v1.failed().get());
                 }
                 return null;
             }
         }, ec);
-        return fut;
+        return promise.future();
     }
 
     public static <T> Future<Void> scalaToVertxVoid(scala.concurrent.Future<T> future, ExecutionContext ec) {
-        Future<Void> fut = Future.future();
+        Promise<Void> promise = Promise.promise();
         future.onComplete(new AbstractFunction1<Try<T>, Void>() {
             @Override
             public Void apply(Try<T> v1) {
                 if (v1.isSuccess()) {
-                    fut.complete();
+                    promise.complete();
                 } else {
-                    fut.fail(v1.failed().get());
+                    promise.fail(v1.failed().get());
                 }
                 return null;
             }
         }, ec);
-        return fut;
+        return promise.future();
     }
 
 
