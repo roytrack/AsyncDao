@@ -240,7 +240,7 @@ public class XPathParser {
 
     private void commonConstructor(boolean validation, Properties variables, EntityResolver entityResolver) {
         this.validation = validation;
-        this.entityResolver = entityResolver;
+        this.entityResolver = entityResolver != null ? entityResolver : new LocalDtdEntityResolver();
         this.variables = variables;
         XPathFactory factory = XPathFactory.newInstance();
         this.xpath = factory.newXPath();
