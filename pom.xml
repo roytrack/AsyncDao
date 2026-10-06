@@ -17,11 +17,9 @@
         <java.version>17</java.version>
         <java.encoding>UTF-8</java.encoding>
         <project.build.sourceEncoding>${java.encoding}</project.build.sourceEncoding>
-        <scala.version>2.12.21</scala.version>
         <vertx.version>4.5.34</vertx.version>
         <netty.version>4.1.139.Final</netty.version>
-        <commomspool.version>2.13.1</commomspool.version>
-        <asyncdriver.version>0.2.21</asyncdriver.version>
+        <jackson.version>2.21.7</jackson.version>
         <slf4j.version>2.0.17</slf4j.version>
         <lombok.version>1.18.48</lombok.version>
         <junit.version>4.13.2</junit.version>
@@ -31,11 +29,18 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- mysql-async pulls in netty-all 4.1.6.Final; align every netty artifact to one patched version -->
+            <!-- align every netty / jackson artifact pulled in by vert.x to one patched version -->
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-bom</artifactId>
                 <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

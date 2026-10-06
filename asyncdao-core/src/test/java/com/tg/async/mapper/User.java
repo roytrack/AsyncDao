@@ -4,7 +4,7 @@ import com.tg.async.annotation.Column;
 import com.tg.async.annotation.Id;
 import com.tg.async.annotation.Ignore;
 import com.tg.async.annotation.Table;
-import org.joda.time.LocalDateTime;
+import java.time.LocalDateTime;
 
 /**
  * Created by twogoods on 2018/4/12.

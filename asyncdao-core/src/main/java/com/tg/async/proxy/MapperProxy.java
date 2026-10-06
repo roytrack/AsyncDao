@@ -1,7 +1,5 @@
 package com.tg.async.proxy;
 
-import com.github.mauricio.async.db.QueryResult;
-import com.github.mauricio.async.db.mysql.MySQLQueryResult;
 import com.tg.async.base.DataHandler;
 import com.tg.async.base.MapperMethod;
 import com.tg.async.dynamic.mapping.BoundSql;
@@ -14,6 +12,9 @@ import com.tg.async.utils.DataConverter;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.mysqlclient.MySQLClient;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +87,7 @@ public class MapperProxy<T> implements InvocationHandler {
 
 
     private interface ExcuteSQLhandle {
-        void handle(MapperMethod mapperMethod, QueryResult queryResult, ModelMap resultMap, DataHandler dataHandler);
+        void handle(MapperMethod mapperMethod, RowSet<Row> queryResult, ModelMap resultMap, DataHandler dataHandler);
     }
 
     private abstract class BaseSQLhandle implements ExcuteSQLhandle {
@@ -116,7 +117,7 @@ public class MapperProxy<T> implements InvocationHandler {
 
     private class SelectHandle extends BaseSQLhandle {
         @Override
-        public void handle(MapperMethod mapperMethod, QueryResult queryResult, ModelMap resultMap, DataHandler dataHandler) {
+        public void handle(MapperMethod mapperMethod, RowSet<Row> queryResult, ModelMap resultMap, DataHandler dataHandler) {
             if (mapperMethod.isReturnsMany()) {
                 List list = DataConverter.queryResultToListObject(queryResult, mapperMethod.getPrimary(), resultMap);
                 dataHandler.handle(list);
@@ -137,13 +138,13 @@ public class MapperProxy<T> implements InvocationHandler {
 
     private class InsertHandle extends BaseSQLhandle {
         @Override
-        public void handle(MapperMethod mapperMethod, QueryResult queryResult, ModelMap resultMap, DataHandler dataHandler) {
+        public void handle(MapperMethod mapperMethod, RowSet<Row> queryResult, ModelMap resultMap, DataHandler dataHandler) {
             MappedStatement mappedStatement = configuration.getMappedStatement(mapperMethod.getName());
             if ("true".equals(mappedStatement.getUseGeneratedKeys())) {
-                long generatedKey = ((MySQLQueryResult) queryResult).lastInsertId();
+                long generatedKey = queryResult.property(MySQLClient.LAST_INSERTED_ID);
                 handleReturnData(mapperMethod, dataHandler, generatedKey, true);
             } else {
-                long rowsAffected = queryResult.rowsAffected();
+                long rowsAffected = queryResult.rowCount();
                 handleReturnData(mapperMethod, dataHandler, rowsAffected, false);
             }
         }
@@ -161,8 +162,8 @@ public class MapperProxy<T> implements InvocationHandler {
 
     private class UpdateHandle extends BaseSQLhandle {
         @Override
-        public void handle(MapperMethod mapperMethod, QueryResult queryResult, ModelMap resultMap, DataHandler dataHandler) {
-            handleReturnData(mapperMethod, dataHandler, queryResult.rowsAffected(), false);
+        public void handle(MapperMethod mapperMethod, RowSet<Row> queryResult, ModelMap resultMap, DataHandler dataHandler) {
+            handleReturnData(mapperMethod, dataHandler, queryResult.rowCount(), false);
         }
 
         @Override
@@ -173,8 +174,8 @@ public class MapperProxy<T> implements InvocationHandler {
 
     private class DeleteHandle extends BaseSQLhandle {
         @Override
-        public void handle(MapperMethod mapperMethod, QueryResult queryResult, ModelMap resultMap, DataHandler dataHandler) {
-            handleReturnData(mapperMethod, dataHandler, queryResult.rowsAffected(), false);
+        public void handle(MapperMethod mapperMethod, RowSet<Row> queryResult, ModelMap resultMap, DataHandler dataHandler) {
+            handleReturnData(mapperMethod, dataHandler, queryResult.rowCount(), false);
         }
 
         @Override
@@ -185,13 +186,7 @@ public class MapperProxy<T> implements InvocationHandler {
 
 
     protected void getConnection(Handler<AsyncResult<SQLConnection>> handler) {
-        configuration.getConnectionPool().getConnection(res -> {
-            if (res.succeeded()) {
-                handler.handle(Future.succeededFuture(res.result()));
-            } else {
-                log.error("get connection error", res.cause());
-            }
-        });
+        handler.handle(Future.succeededFuture(configuration.getConnectionPool().getPooledClient()));
     }
 
 
@@ -202,7 +197,7 @@ public class MapperProxy<T> implements InvocationHandler {
             log.debug("sql : {}", boundSql);
             connection.queryWithParams(boundSql.getSql(), boundSql.getParameters(), qr -> {
                         if (qr.succeeded()) {
-                            QueryResult queryResult = qr.result();
+                            RowSet<Row> queryResult = qr.result();
                             ModelMap resultMap;
                             if (StringUtils.isEmpty(mappedStatement.getResultMap())) {
                                 resultMap = configuration.getModelMap(mapperMethod.getIface().getName());

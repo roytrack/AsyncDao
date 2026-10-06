@@ -24,6 +24,14 @@ public class AsyncDaoAutoConfiguration {
     public AsyncDaoFactory asyncDaoFactory() throws Exception {
         AsyncConfig asyncConfig = new AsyncConfig();
         PoolConfiguration configuration = new PoolConfiguration(asyncDaoConfig.getUsername(), asyncDaoConfig.getHost(), asyncDaoConfig.getPort(), asyncDaoConfig.getPassword(), asyncDaoConfig.getDatabase());
+        configuration.setCharset(asyncDaoConfig.getCharset());
+        configuration.setAuthenticationPlugin(asyncDaoConfig.getAuthenticationPlugin());
+        configuration.setSslMode(asyncDaoConfig.getSslMode());
+        configuration.setSslRootCertPath(asyncDaoConfig.getSslRootCertPath());
+        configuration.setServerRsaPublicKeyPath(asyncDaoConfig.getServerRsaPublicKeyPath());
+        configuration.setMaxTotal(asyncDaoConfig.getMaxTotal());
+        configuration.setBorrowMaxWaitMillis(asyncDaoConfig.getMaxWaitMillis());
+        configuration.setIdleTimeoutMillis(asyncDaoConfig.getIdleTimeoutMillis());
         asyncConfig.setPoolConfiguration(configuration);
         asyncConfig.setMapperPackages(asyncDaoConfig.getBasePackages());
         asyncConfig.setXmlLocations(asyncDaoConfig.getMapperLocations());

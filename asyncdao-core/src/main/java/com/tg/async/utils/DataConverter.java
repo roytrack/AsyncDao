@@ -1,17 +1,15 @@
 package com.tg.async.utils;
 
-import com.github.mauricio.async.db.QueryResult;
-import com.github.mauricio.async.db.ResultSet;
-import com.github.mauricio.async.db.RowData;
 import com.tg.async.dynamic.mapping.ColumnMapping;
 import com.tg.async.dynamic.mapping.ModelMap;
 import com.tg.async.exception.ParseException;
-import com.tg.async.mysql.ScalaUtils;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowIterator;
+import io.vertx.sqlclient.RowSet;
+import io.vertx.sqlclient.data.Numeric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Option;
-import scala.collection.Iterator;
-import scala.runtime.AbstractFunction1;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -27,74 +25,58 @@ public class DataConverter {
     private static final Logger log = LoggerFactory.getLogger(DataConverter.class);
     private static Map<Class, Map<String, PropertyDescriptor>> classesWithProperty = new ConcurrentHashMap<>();
 
-    public static <T> List<T> queryResultToListObject(QueryResult queryResult, Class<T> clazz, ModelMap resultMap) {
-        final Option<ResultSet> rows = queryResult.rows();
-        java.util.List<T> list = new ArrayList<T>();
-        if (rows.isDefined()) {
-            List<String> columnNames = ScalaUtils.toJavaList(rows.get().columnNames().toList());
-            rows.get().foreach(new AbstractFunction1<RowData, Void>() {
-                @Override
-                public Void apply(RowData row) {
-                    try {
-                        list.add(rowDataToObject(row, clazz, resultMap, columnNames));
-                    } catch (Exception e) {
-                        log.error("convert object error :{}", e);
-                    }
-                    return null;
-                }
-            });
+    public static <T> List<T> queryResultToListObject(RowSet<Row> queryResult, Class<T> clazz, ModelMap resultMap) {
+        List<T> list = new ArrayList<T>();
+        List<String> columnNames = queryResult.columnsNames();
+        if (columnNames == null) {
+            return list;
+        }
+        for (Row row : queryResult) {
+            try {
+                list.add(rowDataToObject(row, clazz, resultMap, columnNames));
+            } catch (Exception e) {
+                log.error("convert object error :{}", e);
+            }
         }
         return list;
     }
 
-    public static <T> T queryResultToObject(QueryResult queryResult, Class<T> clazz, ModelMap resultMap) {
-        final Option<ResultSet> rows = queryResult.rows();
-        if (rows.isDefined()) {
-            List<String> columnNames = ScalaUtils.toJavaList(rows.get().columnNames().toList());
-            Iterator<RowData> iterator = rows.get().iterator();
-            if (iterator.hasNext()) {
-                try {
-                    return rowDataToObject(iterator.next(), clazz, resultMap, columnNames);
-                } catch (Exception e) {
-                    log.error("convert object error :{}", e);
-                }
+    public static <T> T queryResultToObject(RowSet<Row> queryResult, Class<T> clazz, ModelMap resultMap) {
+        List<String> columnNames = queryResult.columnsNames();
+        RowIterator<Row> iterator = queryResult.iterator();
+        if (columnNames != null && iterator.hasNext()) {
+            try {
+                return rowDataToObject(iterator.next(), clazz, resultMap, columnNames);
+            } catch (Exception e) {
+                log.error("convert object error :{}", e);
             }
         }
         return null;
     }
 
-    public static Map<String, Object> queryResultToMap(QueryResult queryResult, ModelMap resultMap) {
-        final Option<ResultSet> rows = queryResult.rows();
-        if (rows.isDefined()) {
-            List<String> columnNames = ScalaUtils.toJavaList(rows.get().columnNames().toList());
-            Iterator<RowData> iterator = rows.get().iterator();
-            if (iterator.hasNext()) {
-                return rowDataToMap(iterator.next(), resultMap, columnNames);
-            }
+    public static Map<String, Object> queryResultToMap(RowSet<Row> queryResult, ModelMap resultMap) {
+        List<String> columnNames = queryResult.columnsNames();
+        RowIterator<Row> iterator = queryResult.iterator();
+        if (columnNames != null && iterator.hasNext()) {
+            return rowDataToMap(iterator.next(), resultMap, columnNames);
         }
         return new HashMap<>();
     }
 
-    public static Map<String, Object> rowDataToMap(RowData rowData, ModelMap resultMap, List<String> columnNames) {
+    public static Map<String, Object> rowDataToMap(Row rowData, ModelMap resultMap, List<String> columnNames) {
         Map<String, Object> res = new HashMap<>();
-        Iterator<Object> iterable = rowData.iterator();
-        int index = 0;
-        while (iterable.hasNext()) {
-            Object item = iterable.next();
+        for (int index = 0; index < rowData.size(); index++) {
             String property = getProperty(resultMap, columnNames.get(index));
-            res.put(property, item);
-            index++;
+            res.put(property, getValue(rowData, index));
         }
         return res;
     }
 
-
-    public static <T> T rowDataToObject(RowData rowData, Class<T> clazz, ModelMap resultMap, List<String> columnNames) throws Exception {
-        Iterator<Object> iterable = rowData.iterator();
+    public static <T> T rowDataToObject(Row rowData, Class<T> clazz, ModelMap resultMap, List<String> columnNames) throws Exception {
         //只查一个字段或者count时，这时返回类型可能是String这种非用户自定义的类型
-        // 所以这个类如果是JDK内的类，以及joda里的类（可能查了时间字段），直接返回，因为它肯定不是用户自定义的那种model
-        if (columnNames.size() == 1 && (clazz.getClassLoader() == null) || clazz.getName().startsWith("org.joda.time")) {
-            Object item = iterable.next();
+        // 所以这个类如果是JDK内的类（包括java.time里的时间类型），直接返回，因为它肯定不是用户自定义的那种model
+        if (columnNames.size() == 1 && clazz.getClassLoader() == null) {
+            Object item = getValue(rowData, 0);
             if (item == null) {
                 return null;
             } else if (!clazz.equals(item.getClass())) {
@@ -103,18 +85,27 @@ public class DataConverter {
                 return (T) item;
             }
         }
-
-        T t = clazz.newInstance();
-        int index = 0;
-        while (iterable.hasNext()) {
-            Object item = iterable.next();
+        T t = clazz.getDeclaredConstructor().newInstance();
+        for (int index = 0; index < rowData.size(); index++) {
             String property = getProperty(resultMap, columnNames.get(index));
-            setProperty(clazz, t, property, item);
-            index++;
+            setProperty(clazz, t, property, getValue(rowData, index));
         }
         return t;
     }
 
+    /**
+     * 把驱动特有的类型转换成JDK类型：DECIMAL -> BigDecimal，BLOB/BINARY -> byte[]
+     */
+    private static Object getValue(Row row, int index) {
+        Object value = row.getValue(index);
+        if (value instanceof Numeric) {
+            return ((Numeric) value).bigDecimalValue();
+        }
+        if (value instanceof Buffer) {
+            return ((Buffer) value).getBytes();
+        }
+        return value;
+    }
 
     private static void setProperty(Class clazz, Object object, String property, Object value) {
         Map<String, PropertyDescriptor> properties = classesWithProperty.get(clazz);

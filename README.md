@@ -1,6 +1,6 @@
 ## AsyncDao
 asyncDao是一款异步非阻塞模型下的数据访问层工具。
-* MySQL only. 基于MySQL的[异步驱动](https://github.com/mauricio/postgresql-async)
+* MySQL only. 基于 Vert.x 官方的 [Reactive MySQL Client](https://vertx.io/docs/vertx-mysql-client/java/)，支持 MySQL 5.7 / 8.x / 9.x，默认使用 `caching_sha2_password` 认证
 * 借鉴了Mybatis的mapping 和 dynamicSQL的内容，Mybatiser可以无缝切换
 * 注解表达SQL的能力
 * 事务支持
@@ -106,7 +106,7 @@ public class User {
 
     @Column("created_at")
     private LocalDateTime createdAt;
-    //asyncDao 里sql的时间类型都用joda，注意不是JDK8提供的那个，而是第三方包org.joda.time
+    //时间类型使用JDK的java.time：DATETIME/TIMESTAMP -> LocalDateTime，DATE -> LocalDate，TIME -> Duration；DECIMAL -> BigDecimal
 
     @Ignore
     private String remrk;
@@ -236,6 +236,11 @@ void delete(User user, DataHandler<Long> handler);
 ```
 AsyncConfig asyncConfig = new AsyncConfig();
 PoolConfiguration configuration = new PoolConfiguration("username", "localhost", 3306, "password", "database-name");
+//可选：认证、TLS、连接池等，默认即 caching_sha2_password、不启用TLS、最多12个连接
+//configuration.setAuthenticationPlugin(MySQLAuthenticationPlugin.CACHING_SHA2_PASSWORD);
+//configuration.setSslMode(SslMode.VERIFY_CA);
+//configuration.setSslRootCertPath("/path/to/ca.pem");
+//configuration.setMaxTotal(12);
 asyncConfig.setPoolConfiguration(configuration);
 asyncConfig.setMapperPackages("com.tg.async.mapper");//mapper接口
 asyncConfig.setXmlLocations("mapper/");//xml目录,classpath的相对路径,不支持绝对路径
@@ -300,10 +305,13 @@ async:
      port: 3306
      password: pass
      database: database-name
-     maxTotal: 12
-     maxIdle: 12
-     minIdle: 1
-     maxWaitMillis: 10000
+     authenticationPlugin: caching_sha2_password #默认值，账号使用其他认证插件时会自动切换
+     sslMode: disabled #disabled / preferred / required / verify_ca / verify_identity
+     sslRootCertPath: /path/to/ca.pem #校验服务端证书的CA证书(PEM)，不配置则使用JVM默认信任库
+     serverRsaPublicKeyPath: #非TLS连接做caching_sha2_password完整认证时加密密码用的服务端RSA公钥，不配置则自动向服务端获取
+     maxTotal: 12 #连接池最大连接数
+     maxWaitMillis: 10000 #从连接池获取连接的超时时间
+     idleTimeoutMillis: 0 #空闲连接回收时间，0表示不回收
 ```
 添加`@Mapper`来实现注入
 

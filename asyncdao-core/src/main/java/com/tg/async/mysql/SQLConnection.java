@@ -1,8 +1,9 @@
 package com.tg.async.mysql;
 
-import com.github.mauricio.async.db.QueryResult;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 
 import java.util.List;
 
@@ -18,13 +19,13 @@ public interface SQLConnection {
 
     SQLConnection executeWithParams(String sql, List params, Handler<AsyncResult<Void>> handler);
 
-    SQLConnection query(String sql, Handler<AsyncResult<QueryResult>> handler);
+    SQLConnection query(String sql, Handler<AsyncResult<RowSet<Row>>> handler);
 
-    SQLConnection queryWithParams(String sql, List params, Handler<AsyncResult<QueryResult>> handler);
+    SQLConnection queryWithParams(String sql, List params, Handler<AsyncResult<RowSet<Row>>> handler);
 
-    SQLConnection update(String sql, Handler<AsyncResult<QueryResult>> handler);
+    SQLConnection update(String sql, Handler<AsyncResult<RowSet<Row>>> handler);
 
-    SQLConnection updateWithParams(String sql, List params, Handler<AsyncResult<QueryResult>> handler);
+    SQLConnection updateWithParams(String sql, List params, Handler<AsyncResult<RowSet<Row>>> handler);
 
     void close(Handler<AsyncResult<Void>> handler);
 

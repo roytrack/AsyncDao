@@ -46,7 +46,7 @@ public class AsyncDaoFactory {
                 connection.setAutoCommit(false, Void -> handler.handle(Future.succeededFuture(new Translaction(configuration, res.result()))));
             } else {
                 log.error("start translation failed", res.cause());
-                Future.failedFuture(res.cause());
+                handler.handle(Future.failedFuture(res.cause()));
             }
         });
     }

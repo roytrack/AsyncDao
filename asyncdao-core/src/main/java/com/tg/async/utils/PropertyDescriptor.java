@@ -1,13 +1,10 @@
 package com.tg.async.utils;
 
 import com.tg.async.mysql.MapperLoader;
-import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 
 import static java.util.Locale.ENGLISH;
 
@@ -38,17 +35,6 @@ public class PropertyDescriptor {
         } catch (IllegalArgumentException e) {
             log.error("field {} is {},but data is {}, check class definition in {}", name, type, value.getClass(), clazz.getName());
         }
-    }
-
-    //TODO mysql类型与返回参数类型,先按异步驱动自己的规定
-    private Object convertValue(Object value) {
-        if (value.getClass().equals(LocalDateTime.class)) {
-            return Timestamp.valueOf((LocalDateTime) value);
-        }
-        if (value.getClass().equals(LocalDate.class)) {
-            return ((LocalDate) value).toDate();
-        }
-        return value;
     }
 
     private String getSetterName() {

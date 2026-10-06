@@ -7,9 +7,9 @@ async:
      port: 3306
      password: admin
      database: test
+     authenticationPlugin: caching_sha2_password
+     sslMode: disabled
      maxTotal: 12
-     maxIdle: 12
-     minIdle: 1
      maxWaitMillis: 10000
 
 
